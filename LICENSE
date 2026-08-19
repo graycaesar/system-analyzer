@@ -1,0 +1,38 @@
+System Analyzer — Binary License
+
+Copyright (c) 2026 graycaesar. All rights reserved.
+
+This license applies to the compiled application package ("the Software")
+distributed via this repository's Releases. The source code is not
+published here and is not covered by this license.
+
+1. Grant of license
+   You are granted a free, worldwide, non-exclusive license to:
+   a) install and use the Software, for any purpose, personal or
+      commercial; and
+   b) redistribute the Software, unmodified and in the exact form
+      published in a Release on this repository (including this license
+      file and all accompanying material), by any means (mirroring,
+      direct sharing, inclusion in a collection, etc.), free of charge.
+
+2. Restrictions
+   You may NOT:
+   a) modify, reverse engineer, decompile, or disassemble the Software,
+      except to the extent such restriction is expressly prohibited by
+      applicable law;
+   b) sell the Software or charge for access to it;
+   c) remove or alter any copyright, trademark, or attribution notice
+      contained in the Software.
+
+3. No warranty
+   The Software is provided "AS IS", without warranty of any kind,
+   express or implied, including but not limited to the warranties of
+   merchantability, fitness for a particular purpose, and
+   non-infringement. In no event shall the author be liable for any
+   claim, damages, or other liability arising from the use of the
+   Software.
+
+4. Termination
+   This license terminates automatically if you violate any of its
+   terms. Upon termination you must stop distributing and using the
+   Software.

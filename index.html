@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="System Analyzer: a GTK4/Libadwaita system diagnostics and resource monitoring app for Linux, with eBPF-powered per-process tracing.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%A9%BA%3C/text%3E%3C/svg%3E">
+<title>System Analyzer</title>
+<style>
+  :root {
+    --bg: #E9ECE9;
+    --bg-panel: #DDE2DE;
+    --bg-panel-2: #D2D9D3;
+    --ink: #17211F;
+    --ink-dim: #55625E;
+    --ink-faint: #7C8884;
+    --accent: #B87A1F;
+    --accent-ink: #FBF7EE;
+    --accent-soft: #E4C48A;
+    --good: #3F8562;
+    --alert: #B94A5E;
+    --border: #C4CAC5;
+    --border-strong: #A9B1AB;
+    --shadow: 0 1px 0 rgba(23,33,31,0.04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10181A;
+      --bg-panel: #172023;
+      --bg-panel-2: #1D2729;
+      --ink: #ECE6D9;
+      --ink-dim: #9BA8A6;
+      --ink-faint: #6C7A78;
+      --accent: #E2A33B;
+      --accent-ink: #1A130A;
+      --accent-soft: #3A2D14;
+      --good: #6FAE8A;
+      --alert: #D9556B;
+      --border: #263133;
+      --border-strong: #354244;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10181A;
+    --bg-panel: #172023;
+    --bg-panel-2: #1D2729;
+    --ink: #ECE6D9;
+    --ink-dim: #9BA8A6;
+    --ink-faint: #6C7A78;
+    --accent: #E2A33B;
+    --accent-ink: #1A130A;
+    --accent-soft: #3A2D14;
+    --good: #6FAE8A;
+    --alert: #D9556B;
+    --border: #263133;
+    --border-strong: #354244;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Noto Serif", serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  img { max-width: 100%; display: block; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ---------- header ---------- */
+  header.site {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    height: 64px;
+  }
+  .wordmark {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+  .wordmark .dim { color: var(--ink-faint); }
+  nav.primary {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 13.5px;
+  }
+  nav.primary a.navlink {
+    color: var(--ink-dim);
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  nav.primary a.navlink:hover { color: var(--ink); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 9px 16px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border-strong);
+    color: var(--ink);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 84px 0 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 5%, transparent) 0px,
+      color-mix(in srgb, var(--accent) 5%, transparent) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .hero .wrap { position: relative; }
+
+  h1.headline {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 700;
+    font-size: clamp(2.1rem, 5vw, 3.6rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 26px;
+    max-width: 16ch;
+  }
+
+  .lede {
+    font-size: 1.14rem;
+    line-height: 1.65;
+    color: var(--ink-dim);
+    max-width: 62ch;
+    margin: 0 0 36px;
+  }
+  .lede strong { color: var(--ink); font-weight: 700; }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 56px;
+  }
+  .btn-lg { padding: 13px 22px; font-size: 14.5px; border-radius: 5px; }
+
+  .stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 60px;
+  }
+  .stat {
+    flex: 1 1 160px;
+    padding: 18px 22px 18px 0;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat .num {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-weight: 700;
+    font-size: 1.55rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .stat .label {
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+
+  /* ---------- media frame ---------- */
+  figure.shot {
+    margin: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-panel);
+    box-shadow: var(--shadow);
+  }
+  figure.shot img { width: 100%; }
+  figure.shot figcaption {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+  }
+  figure.shot figcaption b { color: var(--ink-dim); }
+
+  /* ---------- feature sections ---------- */
+  section.feature {
+    border-top: 1px solid var(--border);
+    padding: 64px 0;
+  }
+  .feature .grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 56px;
+    align-items: center;
+  }
+  section.feature.reverse .grid { direction: rtl; }
+  section.feature.reverse .grid > * { direction: ltr; }
+
+  .feature-eyebrow {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--good);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .feature-eyebrow::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--good);
+    border-radius: 1px;
+    flex: none;
+  }
+  h2.finding {
+    font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+    line-height: 1.28;
+    font-weight: 700;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .feature p.body {
+    color: var(--ink-dim);
+    font-size: 1.03rem;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  @media (max-width: 860px) {
+    .feature .grid, section.feature.reverse .grid {
+      grid-template-columns: 1fr;
+      direction: ltr;
+    }
+  }
+
+  /* ---------- privilege diagram ---------- */
+  section.privilege {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 72px 0;
+  }
+  .privilege .inner {
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .privilege .feature-eyebrow { justify-content: center; color: var(--alert); }
+  .privilege .feature-eyebrow::before { background: var(--alert); }
+  .privilege h2.finding { max-width: 30ch; margin-left: auto; margin-right: auto; }
+  .privilege p.body { max-width: 58ch; margin: 0 auto 48px; }
+
+  .diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    flex-wrap: wrap;
+  }
+  .diagram .box {
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    border-radius: 5px;
+    padding: 18px 22px;
+    min-width: 150px;
+  }
+  .diagram .box .t { font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
+  .diagram .box .s { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.02em; }
+  .diagram .box.priv { border-color: color-mix(in srgb, var(--alert) 55%, var(--border-strong)); }
+  .diagram .link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--ink-faint);
+  }
+  .diagram .link .line {
+    width: 64px;
+    height: 1px;
+    background: var(--border-strong);
+    position: relative;
+  }
+  .diagram .link .line::after {
+    content: "";
+    position: absolute;
+    right: 0; top: -3px;
+    border-style: solid;
+    border-width: 3.5px 0 3.5px 6px;
+    border-color: transparent transparent transparent var(--border-strong);
+  }
+  .diagram .link .lbl { font-size: 10.5px; margin-top: 8px; letter-spacing: 0.02em; white-space: nowrap; }
+  .socket-note {
+    margin-top: 22px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- install ---------- */
+  section.install { padding: 76px 0 80px; }
+  .install .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+  @media (max-width: 860px) { .install .grid { grid-template-columns: 1fr; } }
+
+  .terminal {
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #10181A;
+  }
+  .terminal .tbar {
+    display: flex; gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #263133;
+  }
+  .terminal .tbar span {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #354244;
+  }
+  .terminal pre {
+    margin: 0;
+    padding: 20px 18px 22px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: #D8DEDC;
+    overflow-x: auto;
+  }
+  .terminal pre .prompt { color: #E2A33B; }
+  .terminal pre .cmt { color: #6C7A78; }
+
+  .install-meta {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .install-meta code {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    background: var(--bg-panel);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink-dim);
+  }
+
+  /* ---------- footer ---------- */
+  footer.site {
+    border-top: 1px solid var(--border);
+    padding: 40px 0 48px;
+  }
+  footer.site .row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  footer.site .tagline {
+    color: var(--ink-faint);
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 40ch;
+  }
+  footer.site .links {
+    display: flex;
+    gap: 22px;
+    font-size: 13.5px;
+  }
+  footer.site .links a { text-decoration: none; color: var(--ink-dim); }
+  footer.site .links a:hover { color: var(--accent); }
+  footer.site .fineprint {
+    font-size: 12px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    line-height: 1.7;
+    max-width: 78ch;
+  }
+</style>
+
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <div class="wordmark mono">SYSTEM<span class="dim">_</span>ANALYZER</div>
+    <nav class="primary">
+      <a class="navlink" href="#features">Features</a>
+      <a class="navlink" href="#privilege">Privilege model</a>
+      <a class="navlink" href="#install">Install</a>
+      <a class="navlink" href="https://github.com/graycaesar/system-analyzer">GitHub</a>
+    </nav>
+    <a class="btn btn-primary" href="https://github.com/graycaesar/system-analyzer/releases/latest">Download .deb</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1 class="headline">Core 3 is saturated<br>while others stay idle.</h1>
+      <p class="lede">
+        That's an actual line System Analyzer will show you — not a chart you
+        have to interpret yourself. It's a native GTK4 / Libadwaita diagnostics
+        app for Linux with <strong>eBPF-powered per-process tracing</strong>:
+        memory leaks, flame graphs, syscall anomalies, a ransomware canary —
+        wrapped in a privilege-separated desktop app that <strong>never runs
+        as root</strong>.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg" href="https://github.com/graycaesar/system-analyzer/releases/latest">Download latest .deb</a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/graycaesar/system-analyzer">View on GitHub</a>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat">
+          <span class="num mono">0</span>
+          <span class="label">root privileges by default</span>
+        </div>
+        <div class="stat">
+          <span class="num mono">8</span>
+          <span class="label">eBPF tracking probes per process</span>
+        </div>
+        <div class="stat">
+          <span class="num mono">7</span>
+          <span class="label">levels deep, the disk usage map</span>
+        </div>
+        <div class="stat">
+          <span class="num mono">24.04+</span>
+          <span class="label">minimum Ubuntu (Noble)</span>
+        </div>
+        <div class="stat">
+          <span class="num mono">1</span>
+          <span class="label">canary — freezes nothing on its own</span>
+        </div>
+      </div>
+
+      <figure class="shot">
+        <img src="screenshots/web/overview.webp" alt="System Analyzer Overview page: stat tiles for CPU, memory, disk and network, a 10-minute history chart, PSI, RAPL power draw and top CPU consumers." loading="lazy">
+        <figcaption><b>FIG. 01</b> — Overview: PSI, whole-system power draw, and a 10-minute history in one glance.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div id="features"></div>
+
+  <section class="feature">
+    <div class="wrap grid">
+      <div>
+        <p class="feature-eyebrow">module · processes</p>
+        <h2 class="finding">Four scopes. One right-click from a full diagnosis.</h2>
+        <p class="body">
+          All, User, System, or Applications — the last one folds a browser's
+          dozen tabs into a single row. Right-click any process to open it in
+          Diagnostics, kill it with confirmation, jump to its executable's
+          folder, or copy its PID, name, or path.
+        </p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/web/processes.webp" alt="System Analyzer Processes page: sortable, filterable process table with scope tabs for All, User, System and Applications." loading="lazy">
+        <figcaption><b>FIG. 02</b> — Processes: sortable, filterable, scoped.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature reverse">
+    <div class="wrap grid">
+      <figure class="shot">
+        <img src="screenshots/web/disk-map.webp" alt="System Analyzer Disk usage Map: a radial sunburst chart of a folder tree next to a matching indented list, with search and zoom controls." loading="lazy">
+        <figcaption><b>FIG. 03</b> — Disk usage Map: navigable sunburst + tree, up to 7 levels.</figcaption>
+      </figure>
+      <div>
+        <p class="feature-eyebrow">module · resources/disk</p>
+        <h2 class="finding">See what's eating your disk before you delete anything.</h2>
+        <p class="body">
+          A radial sunburst of your folder tree, seven levels deep, next to a
+          matching list — search, sort, expand, zoom. Each folder's bar is
+          scaled to its own parent, so "this is basically all of it" is
+          visible at a glance at any depth. A checkbox moves files to Trash,
+          restricted to paths strictly inside your home directory.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="wrap grid">
+      <div>
+        <p class="feature-eyebrow">module · diagnostics/ebpf</p>
+        <h2 class="finding">Nothing gets traced until you click Start.</h2>
+        <p class="body">
+          Pick any process and open it in its own Diagnostics tab. Its
+          Overview sub-tab diagnoses <b>why</b> it's consuming resources —
+          CPU, memory, I/O, sockets, kernel log, systemd status — and
+          suggests concrete actions (renice, restart the unit, and more),
+          every one confirm-gated. Its Metrics sub-tab adds memory leaks
+          via malloc/free probes, I/O latency, scheduling delay, lock
+          contention, TCP handshake time, a live CPU flame graph, and a
+          syscall baseline that learns what's normal and flags what isn't.
+          A pinned Recommendations tab covers what isn't process-specific:
+          swap/disk-space/CPU playbooks, kernel driver issues, and system
+          conflicts. The ransomware canary only ever suggests a manual
+          freeze — it never acts on its own. Every eBPF card needs a
+          one-time pkexec prompt; the rest of the app needs none.
+        </p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/web/diagnostics.webp" alt="System Analyzer Diagnostics: the pinned Recommendations tab, showing kernel driver issues and a system conflict finding." loading="lazy">
+        <figcaption><b>FIG. 04</b> — Diagnostics: one tab per process, independent tracking sessions.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="feature reverse">
+    <div class="wrap grid">
+      <figure class="shot">
+        <img src="screenshots/web/disk-cleaner.webp" alt="System Analyzer Disk Cleaner: user and system cache categories with checkboxes and a confirmation dialog showing the exact shell command." loading="lazy">
+        <figcaption><b>FIG. 05</b> — Disk Cleaner: safe by construction.</figcaption>
+      </figure>
+      <div>
+        <p class="feature-eyebrow">module · kernel/disk_cleaner</p>
+        <h2 class="finding">Every cleanup shows you the exact shell command first.</h2>
+        <p class="body">
+          Five tabs: user/system caches, a filesystem sweep (empty folders,
+          broken symlinks, duplicates hardlinked instead of deleted), log
+          and temp-file maintenance, orphaned user data, and a security tab
+          for container pruning, TRIM/Btrfs upkeep and secure delete
+          (shred). Every scan exports to JSON/CSV. Nothing is ever deleted
+          silently.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="wrap grid">
+      <div>
+        <p class="feature-eyebrow">module · resources/cpu · disk · network</p>
+        <h2 class="finding">CPU, Disk and Network each get their own deep-dive page.</h2>
+        <p class="body">
+          Beyond the shared Overview (history chart, top consumers,
+          automatic analysis), each resource adds tabs for what's specific
+          to it: CPU gets hardware identity, per-core frequency/thermal
+          detail, <code class="mono">perf</code>-based hardware counters
+          and a benchmark. Disk gets drive identity (model, serial,
+          firmware, encryption), an I/O scheduler and PCIe link view,
+          on-demand S.M.A.R.T. health, and a sequential/random-4K
+          benchmark. Network gets driver/MAC/offload identity, packet and
+          error counters, IP/routing/DNS/DHCP detail, and — only when
+          actually in use — SR-IOV, bonding, bridges and VLANs.
+        </p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/web/disk.webp" alt="System Analyzer Disk page: six tabs from live monitoring and hardware identity to S.M.A.R.T. health and a benchmark." loading="lazy">
+        <figcaption><b>FIG. 06</b> — Disk: identity, I/O scheduler, S.M.A.R.T. health, benchmark.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="privilege" id="privilege">
+    <div class="wrap inner">
+      <p class="feature-eyebrow">privilege model</p>
+      <h2 class="finding">The UI refuses to start as root. Full stop.</h2>
+      <p class="body">
+        eBPF tracing needs elevated access to attach probes, so a separate,
+        minimal worker gets it instead — launched on demand, talking to the
+        UI over a local socket. A graphical prompt appears exactly once, the
+        first time you click <b>Start tracking</b> on an eBPF card. Every
+        resource page, the process table, and the disk cleaner's scan need
+        no elevated privileges at all.
+      </p>
+
+      <div class="diagram">
+        <div class="box">
+          <div class="t">GTK UI</div>
+          <div class="s">unprivileged · refuses sudo</div>
+        </div>
+        <div class="link">
+          <span class="lbl">pkexec, once</span>
+          <span class="line"></span>
+        </div>
+        <div class="box priv">
+          <div class="t">worker</div>
+          <div class="s">privileged · minimal</div>
+        </div>
+      </div>
+      <p class="socket-note mono">⇄ local Unix domain socket, both directions</p>
+    </div>
+  </section>
+
+  <section class="install" id="install">
+    <div class="wrap grid">
+      <div>
+        <p class="feature-eyebrow">install</p>
+        <h2 class="finding">One package. No source, on purpose.</h2>
+        <p class="body">
+          This repository ships only the signed <code class="mono">.deb</code>
+          — grab it from Releases and let apt resolve every dependency.
+          eBPF tracing needs <code class="mono">python3-bpfcc</code> +
+          <code class="mono">bpfcc-tools</code> (recommended, not required);
+          a handful of other on-demand cards (S.M.A.R.T. health, RAM SPD
+          info, hardware performance counters) each recommend one small
+          extra package too. The app is fully usable without any of them
+          — those specific cards just show a clear error instead of
+          failing silently.
+        </p>
+        <div class="install-meta">
+          <span>Requires <code>Ubuntu 24.04 (Noble)</code> or newer — GTK 4.10+ and libadwaita 1.5+.</span>
+          <span>Uninstall anytime with <code>sudo apt remove system-analyzer</code>.</span>
+        </div>
+      </div>
+      <div>
+        <div class="terminal">
+          <div class="tbar"><span></span><span></span><span></span></div>
+          <pre class="mono"><span class="cmt"># download the latest release, then</span>
+<span class="prompt">$</span> sudo apt install ./system-analyzer_1.0.0_all.deb
+<span class="cmt"># apt resolves gtk4, libadwaita, psutil, pkexec…</span></pre>
+        </div>
+        <div class="cta-row" style="margin-top:20px; margin-bottom:0;">
+          <a class="btn btn-primary btn-lg" href="https://github.com/graycaesar/system-analyzer/releases/latest">Download latest .deb</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <div class="wordmark mono">SYSTEM<span class="dim">_</span>ANALYZER</div>
+        <p class="tagline">Deep system diagnostics, resource monitoring and eBPF-based tracing for Linux — native, GTK4, privilege-separated.</p>
+      </div>
+      <nav class="links">
+        <a href="https://github.com/graycaesar/system-analyzer">Repository</a>
+        <a href="https://github.com/graycaesar/system-analyzer/releases">Releases</a>
+        <a href="https://github.com/graycaesar/system-analyzer/issues">Issues</a>
+      </nav>
+    </div>
+    <p class="fineprint">
+      The compiled .deb distributed in this repository's Releases is free to
+      use and redistribute unmodified — see LICENSE for exact terms. Source
+      code is not published in this repository. GTK4, libadwaita and
+      PyGObject are dynamically linked system libraries (LGPL-2.1-or-later);
+      BCC, polkit, NetworkManager, btrfs-progs, ethtool, iproute2,
+      smartmontools, nvme-cli, LVM2, dmidecode, rasdaemon and perf are
+      invoked as external processes at runtime.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
