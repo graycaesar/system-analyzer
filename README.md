@@ -21,7 +21,9 @@ System Analyzer is organized as a sidebar of pages, grouped by purpose:
 - **Overview** — at-a-glance stat tiles for CPU/Memory/Disk/Network, a
   combined 10-minute history chart, Pressure Stall Information (PSI, how
   often at least one task is stalled waiting on a resource — not raw
-  utilization), whole-system power draw via RAPL, and the top CPU
+  utilization), whole-system power draw via RAPL, per-component
+  temperatures (CPU/GPU/disk, matched against their model names, plus
+  any ACPI thermal zone the firmware exposes), and the top CPU
   consumers.
 - **Processes** — a sortable, filterable process table with four scopes
   (All / User / System / Applications, the last one grouping multi-process
@@ -104,7 +106,7 @@ including every descendant. It never ticks live — only the initial open
 and a manual Refresh re-read the process list, so browsing it doesn't
 itself show up as activity.
 
-Network's Overview also has a system-wide packet drop monitor (kernel
+Network's Details tab also has a system-wide packet drop monitor (kernel
 drop reasons, not just totals).
 
 ### Analysis — Diagnostics
@@ -211,9 +213,12 @@ Split into two sub-tabs, Kernel and System.
   the single newest one), sandboxed app inventory (Flatpak/Snap/Docker), a
   suspend/resume report (recent sleep-cycle history from the kernel log,
   and which devices are currently allowed to wake the machine), and a
-  **Boot analysis** card (`systemd-analyze` blame/critical-chain, in a
-  resizable split view).
-- **Disk Cleaner** — five tabs, grouped by permission tier and purpose.
+  **Boot analysis** card (`systemd-analyze` blame/critical-chain in a
+  resizable split view, plus a Suggestions section that turns that data
+  into plain-language recommendations — slow firmware/bootloader time,
+  known slow-unit patterns, excessive Snap loop mounts — instead of
+  leaving it for you to interpret unaided).
+- **Disk Cleaner** — six tabs, grouped by permission tier and purpose.
   **Nothing is ever deleted silently**: every action shows the literal
   shell command it's about to run in a confirmation dialog first, and
   every scan tool can **export its results to JSON/CSV**.
@@ -221,8 +226,15 @@ Split into two sub-tabs, Kernel and System.
     cache, pip, npm, browser cache, Trash including external drives,
     unused Flatpak runtimes) and system-level caches that do (APT
     archive + list cache, orphaned packages/autoremove, systemd journal,
-    crash dumps from apport/systemd-coredump, old Snap revisions kept
-    for rollback), scanned and cleaned separately.
+    crash dumps from apport/systemd-coredump), scanned and cleaned
+    separately.
+  - **Snap** — every installed snap in one scrollable, size-sorted list.
+    Old/disabled revisions kept for rollback are highlighted and, along
+    with any snap you likely installed yourself (checked against snapd's
+    own local API, not a static list), can be removed individually or in
+    bulk. A base/runtime snap other snaps depend on (`core*`, `bare`,
+    `snapd` itself, a content snap with no commands of its own) is shown
+    but never offered for removal.
   - **Filesystem** — empty folders and broken symlinks (found under a
     folder you pick, then removed); duplicate files, **hardlinked** to
     their first copy instead of deleted (nothing lost, nothing
