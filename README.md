@@ -301,6 +301,9 @@ old on Ubuntu 22.04's repositories.
 ### Dependencies
 
 Installed automatically as hard requirements: `python3-gi`,
+`python3-gi-cairo` (Cairo bindings for GObject Introspection — without
+it, the history charts raise `TypeError: Couldn't find foreign struct
+converter for 'cairo.Context'` on every redraw instead of drawing),
 `gir1.2-gtk-4.0`, `gir1.2-adw-1`, `python3-psutil`, `python3-pil`,
 `policykit-1 | pkexec` (provides `pkexec`; `policykit-1` is the
 transitional package name through Ubuntu 24.04/25.x, dropped from the
