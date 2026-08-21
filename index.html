@@ -676,13 +676,12 @@
         <p class="body">
           This repository ships only the signed <code class="mono">.deb</code>
           — grab it from Releases and let apt resolve every dependency.
-          eBPF tracing needs <code class="mono">python3-bpfcc</code> +
-          <code class="mono">bpfcc-tools</code> (recommended, not required);
-          a handful of other on-demand cards (S.M.A.R.T. health, RAM SPD
-          info, hardware performance counters) each recommend one small
-          extra package too. The app is fully usable without any of them
-          — those specific cards just show a clear error instead of
-          failing silently.
+          eBPF tracing ships as compiled CO-RE/libbpf probes, no separate
+          BCC package needed; a handful of on-demand cards (S.M.A.R.T.
+          health, RAM SPD info, hardware performance counters) each
+          recommend one small extra package. The app is fully usable
+          without any of them — those specific cards just show a clear
+          error instead of failing silently.
         </p>
         <div class="install-meta">
           <span>Requires <code>Ubuntu 24.04 (Noble)</code> or newer — GTK 4.10+ and libadwaita 1.5+.</span>
@@ -693,7 +692,7 @@
         <div class="terminal">
           <div class="tbar"><span></span><span></span><span></span></div>
           <pre class="mono"><span class="cmt"># download the latest release, then</span>
-<span class="prompt">$</span> sudo apt install ./system-analyzer_1.0.0_all.deb
+<span class="prompt">$</span> sudo apt install ./system-analyzer_1.2.0_all.deb
 <span class="cmt"># apt resolves gtk4, libadwaita, psutil, pkexec…</span></pre>
         </div>
         <div class="cta-row" style="margin-top:20px; margin-bottom:0;">
@@ -720,11 +719,11 @@
     <p class="fineprint">
       The compiled .deb distributed in this repository's Releases is free to
       use and redistribute unmodified — see LICENSE for exact terms. Source
-      code is not published in this repository. GTK4, libadwaita and
-      PyGObject are dynamically linked system libraries (LGPL-2.1-or-later);
-      BCC, polkit, NetworkManager, btrfs-progs, ethtool, iproute2,
-      smartmontools, nvme-cli, LVM2, dmidecode, rasdaemon and perf are
-      invoked as external processes at runtime.
+      code is not published in this repository. GTK4, libadwaita, PyGObject
+      and libbpf (LGPL-2.1-or-later OR BSD-2-Clause) are dynamically linked
+      system libraries; polkit, NetworkManager, btrfs-progs, ethtool,
+      iproute2, smartmontools, nvme-cli, LVM2, dmidecode, rasdaemon and perf
+      are invoked as external processes at runtime.
     </p>
   </div>
 </footer>
