@@ -303,11 +303,12 @@ old on Ubuntu 22.04's repositories.
 Installed automatically as hard requirements: `python3-gi`,
 `gir1.2-gtk-4.0`, `gir1.2-adw-1`, `python3-psutil`, `python3-pil`,
 `policykit-1` (provides `pkexec`), `libglib2.0-bin` (provides `gio`, used
-for emptying Trash).
+for emptying Trash), `libbpf1` (runtime dependency of the compiled
+eBPF-based tracing probes — every one of them ships CO-RE/libbpf, no
+separate BCC package needed).
 
 Installed by default as recommendations (skip with
-`--no-install-recommends` if you don't want them): `python3-bpfcc` +
-`bpfcc-tools` for the eBPF tracing features, `network-manager` for
+`--no-install-recommends` if you don't want them): `network-manager` for
 network discovery/DHCP/DNS lookups on the Network page, `btrfs-progs`
 for the Disk/Disk Cleaner Btrfs cards, `ieee-data` for MAC-vendor
 lookups, `dmidecode` for the Memory page's RAM module (SPD) card,
@@ -322,19 +323,6 @@ ships its own always-on background service (`smartd`, unrelated to this
 app — it isn't used here, the Health tab talks to the drive directly);
 this package's installer disables that service right after install,
 since it would otherwise run indefinitely for no reason this app needs.
-
-### Known limitation: very recent kernels
-
-On kernel **7.x** (currently only reachable via Ubuntu 24.04's HWE
-enablement stack, not the default GA kernel), three eBPF-based cards —
-**I/O activity tracking**, **CPU flame graph**, and the **ransomware
-canary** (both the per-process and system-wide variants) — disable
-themselves automatically with an explanation instead of failing at
-runtime. The Ubuntu-packaged BCC version this app builds against hasn't
-caught up with that kernel's header layout yet; upstream BCC only added
-kernel 7.x support in a release newer than what any Ubuntu repo
-currently ships. Every other feature, including the rest of Diagnostics,
-is unaffected.
 
 ### Uninstall
 
@@ -358,7 +346,7 @@ underneath it.
 | PyGObject | LGPL-2.1-or-later | Dynamically linked (system library) |
 | psutil | BSD-3-Clause | Python dependency |
 | Pillow | HPND (MIT-like) | Python dependency, metadata cleaner |
-| BCC (BPF Compiler Collection) | Apache-2.0 | Compiles the eBPF probes at runtime |
+| libbpf | LGPL-2.1-or-later OR BSD-2-Clause | Dynamically linked (system library, by the compiled eBPF probes) |
 | polkit (`pkexec`) | LGPL-2.1-or-later | Invoked as an external process |
 | NetworkManager (`nmcli`) | GPL-2.0-or-later | Invoked as an external process |
 | btrfs-progs | GPL-2.0-or-later | Invoked as an external process |
