@@ -1,7 +1,7 @@
 # System Analyzer
 
 A GTK4 / Libadwaita system diagnostics and resource monitoring application
-for Linux, with deep per-process tracing powered by eBPF: memory leak
+for Ubuntu, with deep per-process tracing powered by eBPF: memory leak
 detection, I/O activity, scheduling latency, lock contention, CPU flame
 graphs, syscall anomaly detection, RAPL power estimation, and a ransomware
 behavior canary — all in a native, privilege-separated desktop app.
