@@ -302,7 +302,10 @@ old on Ubuntu 22.04's repositories.
 
 Installed automatically as hard requirements: `python3-gi`,
 `gir1.2-gtk-4.0`, `gir1.2-adw-1`, `python3-psutil`, `python3-pil`,
-`policykit-1` (provides `pkexec`), `libglib2.0-bin` (provides `gio`, used
+`policykit-1 | pkexec` (provides `pkexec`; `policykit-1` is the
+transitional package name through Ubuntu 24.04/25.x, dropped from the
+archive starting with Ubuntu 26.04 in favor of standalone `pkexec`, hence
+the alternative), `libglib2.0-bin` (provides `gio`, used
 for emptying Trash), `libbpf1` (runtime dependency of the compiled
 eBPF-based tracing probes — every one of them ships CO-RE/libbpf, no
 separate BCC package needed).
